@@ -34,8 +34,8 @@ GreenBG='\e[42m'
 BlueBG='\e[44m'
 
 
-database=~/Projekti/Bash/Sqlite_todo/todo.sqlite
-conf=~/Projekti/Bash/Sqlite_todo/.local_sqliterc
+database=../database/todo.sqlite
+conf=../conf/.local_sqliterc
 
 # Surround a variable with single quotes for db input
 surround(){
@@ -44,7 +44,7 @@ surround(){
   echo $output
 }
 
-# Insert a task to the sqlit database
+# Insert a task to the sqlite database using a zenity form
 insert_with_zenity(){
 
   # Show the form
@@ -67,6 +67,7 @@ insert_with_zenity(){
   description=$(awk -F, '{print $2}' <<<$OUTPUT)
   due_date=$(awk -F, '{print $3}' <<<$OUTPUT)
   tags=$(awk -F, '{print $4}' <<<$OUTPUT)
+
   # Add fixed data
   # created_date is today and completed is 0 (false)
   created_date=$(date +%d.%m.%Y.)
@@ -84,33 +85,73 @@ insert_with_zenity(){
                       values ($title, $description, $created_date, $due_date, $completed, $tags)"
 }
 
+# TODO: add input checking
+# Set a task as completed
 set_completed(){
-  exit 0
+  id=$1
+  sqlite3 $database "update tasks set completed=1 where id=$id"
+  echo "Task $1 marked as completed."
 }
 
+# Update a task
 update(){
   sqlite3 $database "update tasks set title=$title, description=$description, created_date=$created_date,
-                     due_date=$due_date,completed=$completed, tags=$tags WHERE id=$id)"
+                     due_date=$due_date, completed=$completed, tags=$tags where id=$id)"
 }
 
-delete(){
-  exit 0
-}
-select_one(){
-  exit 0
+# Delete a task
+delete_task(){
+  id=$1
+  sqlite3 $database "DELETE FROM tasks WHERE id=$id"
+
+  echo "Task $1 deleted."
 }
 
+# Select one task from the db
+# Detailed view
+select_one_task(){
+  id=$1
+  data=$(sqlite3 $database "select * from tasks where id=$id")
+
+  # Split the string of data using a | as a delimiter and store data in an array
+  IFS='|' read -r -a array <<< "$data"
+
+cat <<EOF
+  ID:         ${array[0]}
+  TITLE:      ${array[1]}
+  DESC:       ${array[2]}
+  CREATED:    ${array[3]}
+  DUE DATE:   ${array[4]}
+  TAGS:       ${array[6]}
+  COMPLETED:  ${array[5]}
+EOF
+}
+
+# Select all active tasks from the database
 select_all_active(){
-  data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 0")
+  data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 0" 2>/dev/null)
+
+  printf "\n\n ACTIVE TASKS \n\n"
   printf "$RedText $data $EndColor  \n\n"
 }
 
+# Show completed tasks
+select_all_completed(){
+  # 2>/dev/null suppress the message about the init conf file usage
+  data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 1" 2>/dev/null)
+
+  printf "\n\n COMPLETED TASKS \n\n"
+  printf "$GreenText $data $EndColor  \n\n"
+}
+
+# Show help for the user
 help(){
   echo "some help"
 }
 
 # Check if the user did not specify any flags when calling the script
-# example: bash tpad.sh was called
+# example: bash todo.sh was called
+# and show help
 check_for_empty_input(){
   if [ $# -eq 0 ];
   then
@@ -119,35 +160,38 @@ check_for_empty_input(){
     fi
 }
 
+# Main program
 main(){
-  #zenity_insert
-  #select_all_active
-  while getopts 'acd:m:nt:h' flag; do
+  while getopts 'ac:d:fhnt:' flag; do
     case "${flag}" in
+      # Select all active tasks
       a)
         select_all_active
         ;;
+      # Mark a task as completed
       c)
-        show_table_data
+        id=${OPTARG}
+        set_completed $id
         ;;
+      # Delete a task from the database
       d)
-        Id=${OPTARG}
-        delete_one_line $Id
+        id=${OPTARG}
+        delete_task $id
         ;;
+      # Show all completed(finished) tasks
+      f)
+        select_all_completed
+        ;;
+      # Add a new task form a zenity form
       n)
         insert_with_zenity
         ;;
-      m)
-        Id=${OPTARG}
-        modify_one_line $Id
-        ;;
-      t)
-        Id=${OPTARG}
-        echo "Get task with id $Id"
-        select_one_line $Id
-        ;;
       h)
         help
+        ;;
+      t)
+        id=${OPTARG}
+        select_one_task $id
         ;;
       *) error "Unexpected option ${flag}" ;;
     esac
