@@ -54,6 +54,7 @@ insert_with_zenity(){
                   --add-entry="Title"\
                   --add-entry="Description"\
                   --add-calendar="Due date"\
+                  --add-entry="Send to google"\
                   --add-entry="Tags"
                   )
   accepted=$?
@@ -144,6 +145,16 @@ select_all_completed(){
   printf "$GreenText $data $EndColor  \n\n"
 }
 
+# Send a task to Google calendar
+google_calendar(){
+  due_date=${array[4]}
+  title=${array[1]}
+  day=$(echo "$due_date" | cut -d "." -f 1 | tr "'" " ")
+  month=$(echo "$due_date" | cut -d "." -f 2)
+  echo $day $month
+  gcalcli --calendar 'vidovic.miroslav.vm@gmail.com' quick "$title at 12:00 $month/$day"
+}
+
 # Show help for the user
 help(){
   echo "some help"
@@ -162,7 +173,7 @@ check_for_empty_input(){
 
 # Main program
 main(){
-  while getopts 'ac:d:fhnt:' flag; do
+  while getopts 'ac:d:fg:hnt:' flag; do
     case "${flag}" in
       # Select all active tasks
       a)
@@ -181,6 +192,12 @@ main(){
       # Show all completed(finished) tasks
       f)
         select_all_completed
+        ;;
+      # Send a task to google calendar
+      g)
+        id=${OPTARG}
+        select_one_task $id
+        google_calendar
         ;;
       # Add a new task form a zenity form
       n)
