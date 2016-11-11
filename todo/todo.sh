@@ -33,7 +33,6 @@ GrayBG='\e[100m'
 GreenBG='\e[42m'
 BlueBG='\e[44m'
 
-
 database=../database/todo.sqlite
 conf=../conf/.local_sqliterc
 
@@ -46,7 +45,6 @@ surround(){
 
 # Insert a task to the sqlite database using a zenity form
 insert_with_zenity(){
-
   # Show the form
   OUTPUT=$(zenity --forms --title="Add a new task"\
                   --text="Enter task details"\
@@ -54,7 +52,6 @@ insert_with_zenity(){
                   --add-entry="Title"\
                   --add-entry="Description"\
                   --add-calendar="Due date"\
-                  --add-entry="Send to google"\
                   --add-entry="Tags"
                   )
   accepted=$?
@@ -88,6 +85,7 @@ insert_with_zenity(){
 
 # TODO: add input checking
 # Set a task as completed
+# @param $1 - id
 set_completed(){
   id=$1
   sqlite3 $database "update tasks set completed=1 where id=$id"
@@ -101,6 +99,7 @@ update(){
 }
 
 # Delete a task
+# @param $1 - id
 delete_task(){
   id=$1
   sqlite3 $database "DELETE FROM tasks WHERE id=$id"
@@ -110,6 +109,7 @@ delete_task(){
 
 # Select one task from the db
 # Detailed view
+# @param $1 - id
 select_one_task(){
   id=$1
   data=$(sqlite3 $database "select * from tasks where id=$id")
@@ -157,7 +157,19 @@ google_calendar(){
 
 # Show help for the user
 help(){
-  echo "some help"
+  cat<< heredoc
+  Usage : $0 [options]
+
+  Options:
+    -a         Display all active tasks
+    -c id      Mark a task with selected "id" as completed
+    -d id      Delete a task with "id"
+    -f         Display all finished tasks
+    -g id      Send a task with "id" to Google calendar - requires gcalcli
+    -n         Insert a new task via a Zenity form
+    -h         Display this help message  
+    -t id      Display details for task with "id"
+heredoc
 }
 
 # Check if the user did not specify any flags when calling the script
