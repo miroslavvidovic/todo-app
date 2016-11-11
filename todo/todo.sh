@@ -13,25 +13,16 @@
 # -------------------------------------------------------
 # Script:
 
-DateCreated=`date +%d.%m.%Y.`
-Id=""
-Name=""
-Description=""
-Tags=""
-StartDate="undefined"
-EndDate="undefined"
-Status="active"
-
 # Colors
-# Text colors
-RedText='\033[1;31m'
-GreenText='\033[1;32m'
-EndColor='\e[0m'
+# Foregrounds
+readonly RedText='\033[1;31m'
+readonly GreenText='\033[1;32m'
+readonly EndColor='\e[0m'
 # Backgrounds
-RedBG='\e[101m'
-GrayBG='\e[100m'
-GreenBG='\e[42m'
-BlueBG='\e[44m'
+readonly RedBG='\e[101m'
+readonly GrayBG='\e[100m'
+readonly GreenBG='\e[42m'
+readonly BlueBG='\e[44m'
 
 database=../database/todo.sqlite
 conf=../conf/.local_sqliterc
@@ -40,7 +31,7 @@ conf=../conf/.local_sqliterc
 surround(){
   char=\'
   output=$char$1$char
-  echo $output
+  echo "$output"
 }
 
 # Insert a task to the sqlite database using a zenity form
@@ -133,7 +124,7 @@ select_all_active(){
   data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 0" 2>/dev/null)
 
   printf "\n\n ACTIVE TASKS \n\n"
-  printf "$RedText $data $EndColor  \n\n"
+  printf "$RedText %s $EndColor  \n\n" "$data"
 }
 
 # Show completed tasks
@@ -142,7 +133,7 @@ select_all_completed(){
   data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 1" 2>/dev/null)
 
   printf "\n\n COMPLETED TASKS \n\n"
-  printf "$GreenText $data $EndColor  \n\n"
+  printf "$GreenText %s $EndColor  \n\n" "$data"
 }
 
 # Send a task to Google calendar
@@ -151,7 +142,6 @@ google_calendar(){
   title=${array[1]}
   day=$(echo "$due_date" | cut -d "." -f 1 | tr "'" " ")
   month=$(echo "$due_date" | cut -d "." -f 2)
-  echo $day $month
   gcalcli --calendar 'vidovic.miroslav.vm@gmail.com' quick "$title at 12:00 $month/$day"
 }
 
@@ -194,12 +184,12 @@ main(){
       # Mark a task as completed
       c)
         id=${OPTARG}
-        set_completed $id
+        set_completed "$id"
         ;;
       # Delete a task from the database
       d)
         id=${OPTARG}
-        delete_task $id
+        delete_task "$id"
         ;;
       # Show all completed(finished) tasks
       f)
@@ -208,7 +198,7 @@ main(){
       # Send a task to google calendar
       g)
         id=${OPTARG}
-        select_one_task $id
+        select_one_task "$id"
         google_calendar
         ;;
       # Add a new task form a zenity form
@@ -220,7 +210,7 @@ main(){
         ;;
       t)
         id=${OPTARG}
-        select_one_task $id
+        select_one_task "$id"
         ;;
       *) error "Unexpected option ${flag}" ;;
     esac
