@@ -148,7 +148,9 @@ google_calendar(){
 # Show help for the user
 help(){
   cat<< heredoc
-  Usage : $0 [options]
+  Todo app - task manager
+
+  Usage : $(basename $0) [options]
 
   Options:
     -a         Display all active tasks
