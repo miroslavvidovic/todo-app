@@ -14,15 +14,19 @@
 # Script:
 
 # Colors
-# Foregrounds
-readonly RedText='\033[1;31m'
-readonly GreenText='\033[1;32m'
-readonly EndColor='\e[0m'
-# Backgrounds
-readonly RedBG='\e[101m'
-readonly GrayBG='\e[100m'
-readonly GreenBG='\e[42m'
-readonly BlueBG='\e[44m'
+readonly FG_RED="$(tput setaf 1)"
+readonly FG_GREEN="$(tput setaf 2)"
+readonly BG_RED="$(tput setab 1)"
+readonly BG_GREEN="$(tput setab 2)"
+readonly FG_DARKRED="$(tput setaf 9)"
+readonly FG_BLUE="$(tput setaf 4)"
+readonly FG_LIGHT_BLUE="$(tput setaf 6)"
+readonly FG_LIGHT_GREEN="$(tput setaf 10)"
+
+readonly DIM="$(tput dim)"
+readonly REVERSE="$(tput rev)"
+readonly RESET="$(tput sgr0)"
+readonly BOLD="$(tput bold)"
 
 database=../database/todo.sqlite
 conf=../conf/.local_sqliterc
@@ -109,7 +113,8 @@ select_one_task(){
   IFS='|' read -r -a array <<< "$data"
 
 cat <<EOF
-  ID:         ${array[0]}
+  TASK ID:         ${array[0]}
+  -----------------------------
   TITLE:      ${array[1]}
   DESC:       ${array[2]}
   CREATED:    ${array[3]}
@@ -121,19 +126,33 @@ EOF
 
 # Select all active tasks from the database
 select_all_active(){
-  data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 0" 2>/dev/null)
+  printf "$FG_GREEN[active tasks]\n\n"
+  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "Id" "Created" "Title" "Tags"
+  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "----" "------------" "------------------" "------------------"
+  IFS=$'\n'
+  data_array=($(sqlite3 $database "select id, title, created_date, due_date, tags  from tasks where completed = 0" 2>/dev/null))
+  # printf "${data_array[1]}"
 
-  printf "\n\n ACTIVE TASKS \n\n"
-  printf "$RedText %s $EndColor  \n\n" "$data"
+  for item in "${data_array[@]}"
+  do
+    IFS='|' read -r -a array <<< "$item"
+    printf "$FG_RED%-6s $RESET %-15s$FG_BLUE %-20s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
+  done
 }
 
 # Show completed tasks
 select_all_completed(){
-  # 2>/dev/null suppress the message about the init conf file usage
-  data=$(sqlite3 -init $conf $database "select id, title, created_date, due_date, tags  from tasks where completed = 1" 2>/dev/null)
+  printf "$FG_GREEN[completed tasks]\n\n"
+  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "Id" "Created" "Title" "Tags"
+  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "----" "------------" "------------------" "------------------"
+  IFS=$'\n'
+  data_array=($(sqlite3 $database "select id, title, created_date, due_date, tags  from tasks where completed = 1" 2>/dev/null))
 
-  printf "\n\n COMPLETED TASKS \n\n"
-  printf "$GreenText %s $EndColor  \n\n" "$data"
+  for item in "${data_array[@]}"
+  do
+    IFS='|' read -r -a array <<< "$item"
+    printf "$FG_GREEN%-6s $RESET %-15s$FG_BLUE %-20s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
+  done
 }
 
 # Send a task to Google calendar
