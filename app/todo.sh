@@ -1,32 +1,25 @@
 #!/usr/bin/env bash
 
-# -------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Info:
-# 	Miroslav Vidovic
-# 	todo.sh
-# 	26.07.2016.-15:32:34
-# -------------------------------------------------------
+#   author:    Miroslav Vidovic
+#   file:      todo.sh
+#   created:   26.07.2016.-15:32:34
+#   revision:  22.03.2016.
+#   version:   1.1
+# -----------------------------------------------------------------------------
+# Requirements:
+#   sqlite3, zenity
 # Description:
 #   Task application (todo app) made with sqlite
 # Usage:
+#   todo.sh
 #
-# -------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Script:
 
-# Colors
-readonly FG_RED="$(tput setaf 1)"
-readonly FG_GREEN="$(tput setaf 2)"
-readonly BG_RED="$(tput setab 1)"
-readonly BG_GREEN="$(tput setab 2)"
-readonly FG_DARKRED="$(tput setaf 9)"
-readonly FG_BLUE="$(tput setaf 4)"
-readonly FG_LIGHT_BLUE="$(tput setaf 6)"
-readonly FG_LIGHT_GREEN="$(tput setaf 10)"
-
-readonly DIM="$(tput dim)"
-readonly REVERSE="$(tput rev)"
-readonly RESET="$(tput sgr0)"
-readonly BOLD="$(tput bold)"
+# Includes
+source ./colors.sh
 
 database=../database/todo.sqlite
 conf=../conf/.local_sqliterc
@@ -44,10 +37,9 @@ insert_with_zenity(){
   OUTPUT=$(zenity --forms --title="Add a new task"\
                   --text="Enter task details"\
                   --separator=","\
-                  --add-entry="Title"\
                   --add-entry="Description"\
                   --add-calendar="Due date"\
-                  --add-entry="Tags"
+                  --add-entry="Project"
                   )
   accepted=$?
   if ((accepted != 0)); then
@@ -56,10 +48,9 @@ insert_with_zenity(){
   fi
 
   # Get the data from the form
-  title=$(awk -F, '{print $1}' <<<$OUTPUT)
-  description=$(awk -F, '{print $2}' <<<$OUTPUT)
-  due_date=$(awk -F, '{print $3}' <<<$OUTPUT)
-  tags=$(awk -F, '{print $4}' <<<$OUTPUT)
+  description=$(awk -F, '{print $1}' <<<$OUTPUT)
+  due_date=$(awk -F, '{print $2}' <<<$OUTPUT)
+  project=$(awk -F, '{print $3}' <<<$OUTPUT)
 
   # Add fixed data
   # created_date is today and completed is 0 (false)
@@ -68,14 +59,13 @@ insert_with_zenity(){
 
   # Surround the string data with single quotes
   due_date=$(surround "$due_date")
-  title=$(surround "$title")
   description=$(surround "$description")
-  tags=$(surround "$tags")
+  project=$(surround "$project")
   created_date=$(surround "$created_date")
 
   # Save the data to the database
-  sqlite3 $database "insert into tasks (title, description, created_date, due_date, completed, tags)
-                      values ($title, $description, $created_date, $due_date, $completed, $tags)"
+  sqlite3 $database "insert into tasks (description, created_date, due_date, completed, project)
+                      values ($description, $created_date, $due_date, $completed, $project)"
 }
 
 # TODO: add input checking
@@ -89,8 +79,8 @@ set_completed(){
 
 # Update a task
 update(){
-  sqlite3 $database "update tasks set title=$title, description=$description, created_date=$created_date,
-                     due_date=$due_date, completed=$completed, tags=$tags where id=$id)"
+  sqlite3 $database "update tasks set description=$description, created_date=$created_date,
+                     due_date=$due_date, completed=$completed, project=$project where id=$id)"
 }
 
 # Delete a task
@@ -115,43 +105,42 @@ select_one_task(){
 cat <<EOF
   TASK ID:         ${array[0]}
   -----------------------------
-  TITLE:      ${array[1]}
-  DESC:       ${array[2]}
-  CREATED:    ${array[3]}
-  DUE DATE:   ${array[4]}
-  TAGS:       ${array[6]}
-  COMPLETED:  ${array[5]}
+  Description:       ${array[1]}
+  Created:           ${array[2]}
+  Due date:          ${array[3]}
+  Project:           ${array[4]}
+  Completed:         ${array[5]}
 EOF
 }
 
 # Select all active tasks from the database
 select_all_active(){
   printf "$FG_GREEN[active tasks]\n\n"
-  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "Id" "Created" "Title" "Tags"
-  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "----" "------------" "------------------" "------------------"
+  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "Id" "Created" "Description" "Project"
+  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "----" "------------" "------------------" "----------"
   IFS=$'\n'
-  data_array=($(sqlite3 $database "select id, title, created_date, due_date, tags  from tasks where completed = 0" 2>/dev/null))
+  data_array=($(sqlite3 $database "select id, description, created_date, due_date, project from tasks where completed = 0" 2>/dev/null))
   # printf "${data_array[1]}"
 
   for item in "${data_array[@]}"
   do
     IFS='|' read -r -a array <<< "$item"
-    printf "$FG_RED%-6s $RESET %-15s$FG_BLUE %-20s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
+    printf "$FG_RED%-6s $RESET %-15s$FG_BLUE %-40s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
   done
 }
 
 # Show completed tasks
 select_all_completed(){
   printf "$FG_GREEN[completed tasks]\n\n"
-  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "Id" "Created" "Title" "Tags"
-  printf "$FG_GREEN%-7s %-15s %-20s %s$RESET\n" "----" "------------" "------------------" "------------------"
+  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "Id" "Created" "Description" "Tags"
+  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "----" "------------" "------------------" "------------------"
   IFS=$'\n'
-  data_array=($(sqlite3 $database "select id, title, created_date, due_date, tags  from tasks where completed = 1" 2>/dev/null))
+  data_array=($(sqlite3 $database "select id, description, created_date, due_date, project from tasks where completed = 1" 2>/dev/null))
 
   for item in "${data_array[@]}"
   do
     IFS='|' read -r -a array <<< "$item"
-    printf "$FG_GREEN%-6s $RESET %-15s$FG_BLUE %-20s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
+    printf "$FG_GREEN%-6s $RESET %-15s$FG_BLUE %-40s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
   done
 }
 
