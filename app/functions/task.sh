@@ -1,4 +1,8 @@
-# @param $1 data -> Task description, 22.03.2017., Project name
+#!/bin/sh
+
+
+# Insert a task
+# $1 data -> Task description, 22.03.2017., Project name
 insert_task(){
   data="$1"
 
@@ -19,71 +23,96 @@ insert_task(){
   created_date=$(surround "$created_date")
 
   database_insert $description $created_date $due_date $completed $project
+
+  echo  "Task $description $created_date $due_date $completed $project saved."
 }
 
-# @param $1 - task id
-complete_task(){
-  id="$1"
-  database_task_completed "$id"
-  echo "Task $id marked as completed."
+# Update a task
+# $1 data -> ID, Task description, 22.03.2017., Project name
+update_task(){
+  data="$1"
+
+  # Get the data from the input
+  id=$(echo $data | awk -F, '{print $1}')
+  description=$(echo $data | awk -F, '{print $2}')
+  due_date=$(echo $data | awk -F, '{print $3}')
+  project=$(echo $data | awk -F, '{print $4}')
+
+  # Add fixed data
+  # created_date is today and completed is 0 (false)
+  created_date=$(date +%d.%m.%Y.)
+  completed=0
+
+  # Surround the string data with single quotes
+  due_date=$(surround "$due_date")
+  description=$(surround "$description")
+  project=$(surround "$project")
+  created_date=$(surround "$created_date")
+
+  database_update $id $description $created_date $due_date $completed $project
+
+  echo  "Task $id updated."
+}
+
+# Select all active tasks
+# Creates a global DATA array for the zenity list
+select_all_active(){
+  declare -ga DATA_ACTIVE=()
+
+  # creates a global all_tasks_array
+  database_select_all 
+
+  for item in "${all_tasks_array[@]}"
+  do
+    IFS='|' array=($item)
+    # If task is active add it to options
+    if [[ ${array[5]} == 0 ]]; then
+      DATA_ACTIVE+=(${array[0]} "${array[2]}" "${array[1]}" "${array[4]}" "active")
+    fi
+  done
+
+  unset all_tasks_array
+}
+
+# Select all completed tasks
+# Creates a global DATA array for the zenity list
+select_all_completed(){
+  declare -ga DATA_COMPLETED=()
+
+  # creates a global all_tasks_array
+  database_select_all 
+
+  for item in "${all_tasks_array[@]}"
+  do
+    IFS='|' array=($item)
+    # If task is active add it to options
+    if [[ ${array[5]} == 1 ]]; then
+      DATA_COMPLETED+=(${array[0]} "${array[2]}" "${array[1]}" "${array[4]}" "completed")
+    fi
+  done
+
+  unset all_tasks_array
 }
 
 # Delete a task
-# @param $1 - id
+# $1 - id
 delete_task(){
-  id=$1
-  database_task_delete "$id"
+  id="$1"
+  database_delete "$id"
   echo "Task $1 deleted."
+}
+
+# Change the task status to completed
+# $1 - task id
+complete_task(){
+  id="$1"
+  database_complete "$id"
+  echo "Task $id updated to completed."
 }
 
 # One task detailed view
 # @param $1 - id
 select_one_task(){
-  id=$1
-
-  data=$(database_task_select_one)
-
-  # Split the string of data using a | as a delimiter and store data in an array
-  IFS='|' read -r -a array <<< "$data"
-
-cat <<EOF
-  $BOLD Task ID:           ${array[0]} $RESET
-  $FG_GREEN Description:$RESET       ${array[1]}
-  $FG_GREEN Created:    $RESET       ${array[2]}
-  $FG_GREEN Due date:   $RESET       ${array[3]}
-  $FG_GREEN Project:    $RESET       ${array[4]}
-  $FG_GREEN Completed:  $RESET       ${array[5]}
-EOF
-
-}
-
-select_all_active(){
-  printf "$FG_GREEN[active tasks]\n\n"
-  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "Id" "Created" "Description" "Project"
-  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "----" "------------" "------------------" "----------"
-  IFS=$'\n'
-
-  database_select_all 0
-
-  for item in "${data_array[@]}"
-  do
-    IFS='|' read -r -a array <<< "$item"
-    printf "$FG_RED%-6s $RESET %-15s$FG_BLUE %-40s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
-  done
-}
-
-# Show completed tasks
-select_all_completed(){
-  printf "$FG_GREEN[completed tasks]\n\n"
-  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "Id" "Created" "Description" "Tags"
-  printf "$FG_GREEN%-7s %-15s %-40s %s$RESET\n" "----" "------------" "------------------" "------------------"
-  IFS=$'\n'
-
-  database_select_all 1
-
-  for item in "${data_array[@]}"
-  do
-    IFS='|' read -r -a array <<< "$item"
-    printf "$FG_GREEN%-6s $RESET %-15s$FG_BLUE %-40s $RESET%s\n" "${array[0]}" "${array[2]}" "${array[1]}" "${array[4]}"
-  done
+  id="$1"
+  database_select_one "$id"
 }
