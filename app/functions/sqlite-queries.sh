@@ -25,7 +25,7 @@ database_update(){
 
 # Update completed field to 1
 # $1 - id
-database_task_completed(){
+database_complete(){
   sqlite3 $database "update tasks set completed=1 where id=$1"
 }
 
@@ -39,6 +39,7 @@ database_delete(){
 # $1 - id
 # creates a global array - one_task_array
 database_select_one() {
+  IFS='|'
   declare -ga one_task_array
   one_task_array=($(sqlite3 $database "select * from tasks where id=$1"))
 }
@@ -51,4 +52,3 @@ database_select_all() {
   declare -ga all_tasks_array
   all_tasks_array=($(sqlite3 $database "select id, description, created_date, due_date, project, completed from tasks"))
 }
-
