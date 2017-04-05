@@ -1,6 +1,6 @@
 # todo-app
 
-Task management applicaton built with Bash, Zenity and SQLite
+A simple task management application
 
 ## Installation
 
