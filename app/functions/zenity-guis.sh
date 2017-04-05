@@ -106,7 +106,7 @@ completed_tasks_form(){
   accepted=$?
   if ((accepted != 0)); then
       echo "action canceled"
-      main menu
+      main_menu
   fi
 
   one_task_form "$OUTPUT"
