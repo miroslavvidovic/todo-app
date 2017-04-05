@@ -54,6 +54,22 @@ update_task(){
   echo  "Task $id updated."
 }
 
+# Select all  tasks
+# Creates a global DATA array for the zenity list
+select_all(){
+  declare -ga DATA_ALL=()
+
+  # creates a global all_tasks_array
+  database_select_all 
+
+  for item in "${all_tasks_array[@]}"
+  do
+    IFS='|' array=($item)
+    DATA+=(${array[0]} "${array[2]}" "${array[1]}" "${array[4]}" "${array[5]}")
+  done
+
+  unset all_tasks_array
+}
 # Select all active tasks
 # Creates a global DATA array for the zenity list
 select_all_active(){
